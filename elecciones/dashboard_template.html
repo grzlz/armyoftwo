@@ -1,0 +1,396 @@
+<title>Delta Seccional México</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  /* Layout: filter row scopes everything below; summary tiles, then two chart cards, scatter, tables. */
+  :root {
+    --bg: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10);
+    --pos: #2a78d6; --neg: #e34948; --mid: #c3c2b7; --dot: #256abf;
+    --accent: #1c5cab; --accent-soft: #cde2fb;
+    --font: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+      --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+      --pos: #3987e5; --neg: #e66767; --mid: #52514e; --dot: #5598e7;
+      --accent: #86b6ef; --accent-soft: #184f95; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+    --pos: #3987e5; --neg: #e66767; --mid: #52514e; --dot: #5598e7;
+    --accent: #86b6ef; --accent-soft: #184f95; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.45;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px; }
+  .wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 20px; }
+  header h1 { font-size: 24px; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.01em; text-wrap: balance; }
+  header p { margin: 0; color: var(--ink-2); max-width: 70ch; }
+  .eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; }
+  .filters { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; padding: 12px 14px; background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; }
+  .filters label { display: grid; gap: 4px; font-size: 12px; color: var(--ink-2); }
+  .filters select, .filters input { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--axis); border-radius: 6px; padding: 6px 8px; min-width: 150px; }
+  .filters input[type=number] { min-width: 90px; width: 90px; }
+  .seg { display: inline-flex; border: 1px solid var(--axis); border-radius: 6px; overflow: hidden; }
+  .seg button { font: inherit; font-size: 13px; padding: 6px 10px; background: var(--bg); color: var(--ink-2); border: 0; cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--axis); }
+  .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--ink); font-weight: 500; }
+  .seg button:focus-visible, .filters select:focus-visible, .filters input:focus-visible, .tbtn:focus-visible, rect:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+  .tile { background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 12px 14px; display: grid; gap: 2px; min-width: 0; }
+  .tile .label { font-size: 12px; color: var(--ink-2); }
+  .tile .value { font-size: 26px; font-weight: 600; line-height: 1.15; }
+  .tile .sub { font-size: 12px; color: var(--muted); }
+  .delta { font-weight: 500; }
+  .delta.pos { color: var(--pos); } .delta.neg { color: var(--neg); }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 14px 16px; min-width: 0; display: grid; gap: 8px; align-content: start; }
+  .card-h { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .card h2 { font-size: 15px; font-weight: 600; margin: 0; }
+  .card .note { font-size: 12px; color: var(--muted); margin: 0; }
+  .tbtn { font: inherit; font-size: 12px; color: var(--ink-2); background: transparent; border: 1px solid var(--axis); border-radius: 6px; padding: 3px 8px; cursor: pointer; }
+  .tbtn[aria-pressed="true"] { background: var(--accent-soft); color: var(--ink); }
+  svg { width: 100%; height: auto; display: block; font-family: var(--font); }
+  svg text { fill: var(--muted); font-size: 11px; }
+  svg .lbl { fill: var(--ink-2); }
+  svg .grid { stroke: var(--grid); stroke-width: 1; }
+  svg .axis { stroke: var(--axis); stroke-width: 1; }
+  svg rect.bar { cursor: pointer; }
+  svg rect.bar:hover, svg rect.bar:focus { filter: brightness(1.15); }
+  .scatter-wrap { position: relative; width: 100%; aspect-ratio: 16 / 10; max-width: 100%; max-height: 520px; }
+  canvas { width: 100%; height: 100%; display: block; }
+  .tblwrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 5px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  th { color: var(--ink-2); font-weight: 500; position: sticky; top: 0; background: var(--surface); }
+  th:first-child, td:first-child, th.l, td.l { text-align: left; }
+  tr:hover td { background: color-mix(in srgb, var(--accent-soft) 35%, transparent); }
+  td.sel, th.sel { font-weight: 600; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; background: var(--sw); }
+  #tip { position: absolute; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--ring); box-shadow: 0 4px 16px rgba(0,0,0,0.15); border-radius: 6px; padding: 8px 10px; font-size: 12px; line-height: 1.4; z-index: 20; max-width: 260px; }
+  #tip strong { font-size: 13px; }
+  #tip .k { color: var(--ink-2); }
+  footer { color: var(--muted); font-size: 12px; max-width: 80ch; display: grid; gap: 6px; }
+  footer p { margin: 0; }
+  .empty { color: var(--muted); padding: 24px; text-align: center; }
+  @media (prefers-reduced-motion: no-preference) { .card, .tile { transition: opacity .15s; } }
+  @media (max-width: 480px) { .filters select, .filters input { min-width: 120px; } header h1 { font-size: 20px; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Cómputos distritales INE · diputaciones federales · nivel sección electoral</div>
+    <h1 id="h1">Delta seccional</h1>
+    <p id="intro"></p>
+  </header>
+
+  <div class="filters" role="group" aria-label="Filtros">
+    <label>Entidad <select id="fEnt"><option value="">Todas</option></select></label>
+    <label>Distrito federal <select id="fDist"><option value="">Todos</option></select></label>
+    <label>Bloque <span class="seg" id="fBloc"></span></label>
+    <label>Mín. votos por elección <input id="fMin" type="number" min="0" step="10" value="50"></label>
+    <label>Sección (clave o número) <input id="fQ" type="search" placeholder="09-0123"></label>
+  </div>
+
+  <section class="kpis" id="kpis" aria-live="polite"></section>
+
+  <section class="grid2">
+    <div class="card">
+      <div class="card-h"><h2 id="hHist">Distribución del cambio por sección</h2><button class="tbtn" id="tHist" aria-pressed="false">Tabla</button></div>
+      <p class="note" id="nHist"></p>
+      <div id="cHist"></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2 id="hGeo">Cambio por entidad</h2><button class="tbtn" id="tGeo" aria-pressed="false">Tabla</button></div>
+      <p class="note" id="nGeo">Puntos porcentuales, ponderado por votos. Ordenado de mayor ganancia a mayor pérdida.</p>
+      <div id="cGeo"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><h2 id="hSc">Porcentaje por sección</h2><button class="tbtn" id="tSc" aria-pressed="false">Tabla</button></div>
+    <p class="note" id="nSc"></p>
+    <div id="cSc"><div class="scatter-wrap"><canvas id="scatter"></canvas></div></div>
+  </section>
+
+  <section class="grid2">
+    <div class="card"><div class="card-h"><h2 id="hUp">Mayores ganancias</h2></div><div class="tblwrap" id="tUp"></div></div>
+    <div class="card"><div class="card-h"><h2 id="hDown">Mayores pérdidas</h2></div><div class="tblwrap" id="tDown"></div></div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><h2>Todas las secciones del filtro</h2><p class="note" id="nAll"></p></div>
+    <div class="tblwrap" id="tAll"></div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+<div id="tip" hidden></div>
+
+<script id="data" type="application/json">__DATA_JSON__</script>
+<script>
+(function () {
+  'use strict';
+  const DATA = JSON.parse(document.getElementById('data').textContent);
+  const B = DATA.blocs, nb = B.length, YA = DATA.base, YB = DATA.target;
+  const STATES = DATA.states;
+  const rows = DATA.rows.map(r => {
+    const o = { ent: r[0], dist: r[1], sec: r[2], lnA: r[3], totA: r[4], lnB: r[5 + nb], totB: r[6 + nb], a: [], b: [], sA: [], sB: [], d: [] };
+    for (let k = 0; k < nb; k++) {
+      o.a[k] = r[5 + k]; o.b[k] = r[7 + nb + k];
+      o.sA[k] = o.totA ? o.a[k] / o.totA * 100 : null;
+      o.sB[k] = o.totB ? o.b[k] / o.totB * 100 : null;
+      o.d[k] = (o.sA[k] != null && o.sB[k] != null) ? o.sB[k] - o.sA[k] : null;
+    }
+    o.pA = o.lnA ? o.totA / o.lnA * 100 : null; o.pB = o.lnB ? o.totB / o.lnB * 100 : null;
+    o.dP = (o.pA != null && o.pB != null) ? o.pB - o.pA : null;
+    o.clave = String(o.ent).padStart(2, '0') + '-' + String(o.sec).padStart(4, '0');
+    return o;
+  });
+
+  const fmtI = new Intl.NumberFormat('es-MX');
+  const fI = n => fmtI.format(Math.round(n));
+  const fP = (x, d = 1) => x == null || isNaN(x) ? '–' : x.toFixed(d).replace('.', ',') + ' %';
+  const fD = (x, d = 1) => x == null || isNaN(x) ? '–' : (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x).toFixed(d).replace('.', ',') + ' pp';
+  const sName = e => STATES[String(e)] || ('Entidad ' + e);
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const svgEl = (tag, attrs) => { const e = document.createElementNS('http://www.w3.org/2000/svg', tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+
+  const state = { ent: '', dist: '', bloc: 0, min: 50, q: '' };
+  try { const s = JSON.parse(localStorage.getItem('delta-filters') || '{}'); Object.assign(state, s); } catch (e) {}
+
+  // ---------- header
+  document.getElementById('h1').textContent = `Delta seccional ${YA} → ${YB}`;
+  document.getElementById('intro').textContent = `Cambio en el porcentaje de votos por bloque entre las elecciones de diputaciones federales de ${YA} y ${YB}, en cada sección electoral (clave = entidad + sección). ${fI(rows.length)} secciones presentes en ambas elecciones; ${fI(DATA.only_base)} solo en ${YA} y ${fI(DATA.only_target)} solo en ${YB} quedan fuera.`;
+
+  // ---------- filters
+  const fEnt = document.getElementById('fEnt'), fDist = document.getElementById('fDist'), fBloc = document.getElementById('fBloc'), fMin = document.getElementById('fMin'), fQ = document.getElementById('fQ');
+  [...new Set(rows.map(r => r.ent))].sort((a, b) => a - b).forEach(e => { const o = el('option', null, sName(e)); o.value = e; fEnt.appendChild(o); });
+  B.forEach((b, i) => { const bt = el('button', null, b.label); bt.type = 'button'; bt.dataset.i = i; bt.setAttribute('aria-pressed', String(i === state.bloc)); bt.addEventListener('click', () => { state.bloc = i; fBloc.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === bt))); render(); }); fBloc.appendChild(bt); });
+  function fillDist() {
+    const cur = state.dist; fDist.innerHTML = ''; const o0 = el('option', null, 'Todos'); o0.value = ''; fDist.appendChild(o0);
+    if (state.ent !== '') {
+      [...new Set(rows.filter(r => r.ent == state.ent).map(r => r.dist))].sort((a, b) => a - b).forEach(d => { const o = el('option', null, 'Distrito ' + d); o.value = d; fDist.appendChild(o); });
+    }
+    fDist.value = [...fDist.options].some(o => o.value == cur) ? cur : ''; state.dist = fDist.value;
+  }
+  fEnt.value = state.ent; fillDist(); fMin.value = state.min; fQ.value = state.q;
+  fEnt.addEventListener('change', () => { state.ent = fEnt.value; state.dist = ''; fillDist(); render(); });
+  fDist.addEventListener('change', () => { state.dist = fDist.value; render(); });
+  fMin.addEventListener('input', () => { state.min = Math.max(0, +fMin.value || 0); render(); });
+  fQ.addEventListener('input', () => { state.q = fQ.value.trim(); render(); });
+  ['tHist', 'tGeo', 'tSc'].forEach(id => document.getElementById(id).addEventListener('click', ev => { const b = ev.currentTarget; b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true')); render(); }));
+
+  // ---------- tooltip
+  const tip = document.getElementById('tip');
+  function showTip(ev, lines) {
+    tip.innerHTML = ''; lines.forEach((l, i) => { const d = el('div'); if (i === 0) { const s = el('strong', null, l); d.appendChild(s); } else { d.textContent = l; } tip.appendChild(d); });
+    tip.hidden = false; moveTip(ev);
+  }
+  function moveTip(ev) { const x = ev.pageX, y = ev.pageY; const w = tip.offsetWidth, vw = document.documentElement.clientWidth; tip.style.left = Math.min(x + 14, window.scrollX + vw - w - 8) + 'px'; tip.style.top = (y + 14) + 'px'; }
+  function hideTip() { tip.hidden = true; }
+
+  function filtered() {
+    const q = state.q.replace(/\s/g, '');
+    let qe = null, qs = null;
+    if (q) { const m = q.match(/^(\d{1,2})-?(\d{1,4})$/); if (m && q.includes('-')) { qe = +m[1]; qs = +m[2]; } else if (/^\d+$/.test(q)) { qs = +q; } }
+    return rows.filter(r => (state.ent === '' || r.ent == state.ent) && (state.dist === '' || r.dist == state.dist) && Math.min(r.totA, r.totB) >= state.min && (qs == null || (r.sec === qs && (qe == null || r.ent === qe))));
+  }
+  function weighted(set, k) {
+    let ta = 0, tb = 0, a = 0, b = 0, la = 0, lb = 0;
+    for (const r of set) { ta += r.totA; tb += r.totB; a += r.a[k]; b += r.b[k]; la += r.lnA; lb += r.lnB; }
+    return { pa: ta ? a / ta * 100 : null, pb: tb ? b / tb * 100 : null, d: (ta && tb) ? b / tb * 100 - a / ta * 100 : null, ta, tb, la, lb, partA: la ? ta / la * 100 : null, partB: lb ? tb / lb * 100 : null, n: set.length };
+  }
+
+  // ---------- KPIs
+  function renderKpis(set) {
+    const k = document.getElementById('kpis'); k.innerHTML = '';
+    const scope = state.dist !== '' ? `${sName(state.ent)} · distrito ${state.dist}` : state.ent !== '' ? sName(state.ent) : 'Nacional';
+    const t0 = el('div', 'tile'); t0.append(el('div', 'label', 'Secciones comparadas'), el('div', 'value', fI(set.length)), el('div', 'sub', scope + (state.min ? ` · ≥ ${fI(state.min)} votos` : '')));
+    k.appendChild(t0);
+    B.forEach((b, i) => {
+      const w = weighted(set, i); const t = el('div', 'tile');
+      const dv = el('div', 'value delta ' + (w.d > 0 ? 'pos' : w.d < 0 ? 'neg' : ''), fD(w.d));
+      t.append(el('div', 'label', b.label), dv, el('div', 'sub', `${fP(w.pa)} en ${YA} → ${fP(w.pb)} en ${YB}`));
+      k.appendChild(t);
+    });
+    const w = weighted(set, 0); const tp = el('div', 'tile'); const dP = (w.partA != null && w.partB != null) ? w.partB - w.partA : null;
+    tp.append(el('div', 'label', 'Participación'), el('div', 'value delta ' + (dP > 0 ? 'pos' : dP < 0 ? 'neg' : ''), fD(dP)), el('div', 'sub', `${fP(w.partA)} → ${fP(w.partB)} · lista nominal ${fI(w.la)} → ${fI(w.lb)}`));
+    k.appendChild(tp);
+    const bi = state.bloc; const up = set.filter(r => r.d[bi] > 0).length; const tu = el('div', 'tile');
+    tu.append(el('div', 'label', `Secciones donde ${B[bi].label} subió`), el('div', 'value', set.length ? (up / set.length * 100).toFixed(0) + ' %' : '–'), el('div', 'sub', `${fI(up)} de ${fI(set.length)}`));
+    k.appendChild(tu);
+  }
+
+  // ---------- histogram
+  function renderHist(set) {
+    const bi = state.bloc, host = document.getElementById('cHist'); host.innerHTML = '';
+    document.getElementById('hHist').textContent = `Distribución del cambio de ${B[bi].label} por sección`;
+    const LIM = 30, bins = new Array(2 * LIM + 1).fill(0); let n = 0;
+    for (const r of set) { if (r.d[bi] == null) continue; let v = Math.round(r.d[bi]); v = Math.max(-LIM, Math.min(LIM, v)); bins[v + LIM]++; n++; }
+    document.getElementById('nHist').textContent = `Cada barra agrupa secciones por su cambio redondeado al punto porcentual (${YB} menos ${YA}); los extremos acumulan ±${LIM} o más. ${fI(n)} secciones.`;
+    const asTable = document.getElementById('tHist').getAttribute('aria-pressed') === 'true';
+    if (!n) { host.appendChild(el('div', 'empty', 'Sin secciones en el filtro.')); return; }
+    if (asTable) {
+      const tw = el('div', 'tblwrap'); const t = el('table'); const th = el('tr'); ['Cambio (pp)', 'Secciones', 'Porcentaje'].forEach((h, i) => th.appendChild(el('th', i ? '' : 'l', h))); t.appendChild(th);
+      bins.forEach((c, i) => { if (!c) return; const tr = el('tr'); const v = i - LIM; tr.append(el('td', 'l', (v === -LIM ? '≤ ' : v === LIM ? '≥ ' : '') + fD(v, 0)), el('td', null, fI(c)), el('td', null, fP(c / n * 100))); t.appendChild(tr); });
+      tw.appendChild(t); host.appendChild(tw); return;
+    }
+    const W = 720, H = 260, m = { l: 40, r: 12, t: 12, b: 34 }, pw = W - m.l - m.r, ph = H - m.t - m.b;
+    const max = Math.max(...bins); const bw = pw / bins.length; const barW = Math.min(24, bw - 2);
+    const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Histograma del cambio por sección' });
+    const ticks = niceTicks(0, max, 4);
+    ticks.forEach(tv => { const y = m.t + ph - tv / max * ph; svg.appendChild(svgEl('line', { x1: m.l, x2: W - m.r, y1: y, y2: y, class: 'grid' })); const t = svgEl('text', { x: m.l - 6, y: y + 4, 'text-anchor': 'end' }); t.textContent = compact(tv); svg.appendChild(t); });
+    svg.appendChild(svgEl('line', { x1: m.l, x2: W - m.r, y1: m.t + ph, y2: m.t + ph, class: 'axis' }));
+    const zx = m.l + (LIM + 0.5) * bw; svg.appendChild(svgEl('line', { x1: zx, x2: zx, y1: m.t, y2: m.t + ph, class: 'axis' }));
+    bins.forEach((c, i) => {
+      const v = i - LIM, h = c / max * ph, x = m.l + i * bw + (bw - barW) / 2, y = m.t + ph - h;
+      const fill = v > 0 ? 'var(--pos)' : v < 0 ? 'var(--neg)' : 'var(--mid)';
+      const rc = svgEl('rect', { x, y, width: barW, height: Math.max(h, 0), fill, class: 'bar', rx: 0, tabindex: 0 });
+      if (h > 4) { rc.setAttribute('rx', '2'); }
+      const lines = [(v === -LIM ? '≤ ' : v === LIM ? '≥ ' : '') + fD(v, 0), `${fI(c)} secciones (${fP(c / n * 100)})`];
+      const hit = svgEl('rect', { x: m.l + i * bw, y: m.t, width: bw, height: ph, fill: 'transparent' });
+      hit.addEventListener('pointerenter', ev => showTip(ev, lines)); hit.addEventListener('pointermove', moveTip); hit.addEventListener('pointerleave', hideTip);
+      rc.addEventListener('focus', ev => { const b = rc.getBoundingClientRect(); showTip({ pageX: b.left + window.scrollX, pageY: b.top + window.scrollY }, lines); }); rc.addEventListener('blur', hideTip);
+      svg.appendChild(rc); svg.appendChild(hit);
+    });
+    [-LIM, -20, -10, 0, 10, 20, LIM].forEach(v => { const t = svgEl('text', { x: m.l + (v + LIM + 0.5) * bw, y: H - 14, 'text-anchor': 'middle' }); t.textContent = (v === -LIM ? '≤' : v === LIM ? '≥' : '') + (v > 0 ? '+' : '') + v; svg.appendChild(t); });
+    const xl = svgEl('text', { x: m.l + pw / 2, y: H - 2, 'text-anchor': 'middle', class: 'lbl' }); xl.textContent = `cambio en puntos porcentuales (${YB} − ${YA})`; svg.appendChild(xl);
+    host.appendChild(svg);
+  }
+
+  // ---------- per-state / per-district diverging bars
+  function renderGeo(set) {
+    const bi = state.bloc, host = document.getElementById('cGeo'); host.innerHTML = '';
+    const byDist = state.ent !== '';
+    document.getElementById('hGeo').textContent = byDist ? `Cambio de ${B[bi].label} por distrito federal (${sName(state.ent)})` : `Cambio de ${B[bi].label} por entidad`;
+    const groups = new Map();
+    for (const r of set) { const k = byDist ? r.dist : r.ent; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); }
+    const items = [...groups.entries()].map(([k, rs]) => ({ k, name: byDist ? 'Distrito ' + k : sName(k), ...weighted(rs, bi) })).filter(x => x.d != null).sort((a, b) => b.d - a.d);
+    const asTable = document.getElementById('tGeo').getAttribute('aria-pressed') === 'true';
+    if (!items.length) { host.appendChild(el('div', 'empty', 'Sin datos en el filtro.')); return; }
+    if (asTable) {
+      const tw = el('div', 'tblwrap'); const t = el('table'); const th = el('tr'); [byDist ? 'Distrito' : 'Entidad', `${YA}`, `${YB}`, 'Cambio', 'Secciones'].forEach((h, i) => th.appendChild(el('th', i ? '' : 'l', h))); t.appendChild(th);
+      items.forEach(x => { const tr = el('tr'); tr.append(el('td', 'l', x.name), el('td', null, fP(x.pa)), el('td', null, fP(x.pb)), el('td', 'delta ' + (x.d > 0 ? 'pos' : 'neg'), fD(x.d)), el('td', null, fI(x.n))); t.appendChild(tr); });
+      tw.appendChild(t); host.appendChild(tw); return;
+    }
+    const rowH = 22, W = 720, m = { l: 150, r: 56, t: 8, b: 28 }, H = m.t + m.b + items.length * rowH, pw = W - m.l - m.r;
+    const ext = Math.max(1, ...items.map(x => Math.abs(x.d))); const lim = Math.ceil(ext / 2) * 2;
+    const x0 = m.l + pw / 2, sx = v => x0 + v / lim * (pw / 2);
+    const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Cambio por ' + (byDist ? 'distrito' : 'entidad') });
+    niceTicks(-lim, lim, 6).forEach(tv => { const x = sx(tv); svg.appendChild(svgEl('line', { x1: x, x2: x, y1: m.t, y2: H - m.b, class: tv === 0 ? 'axis' : 'grid' })); const t = svgEl('text', { x, y: H - 10, 'text-anchor': 'middle' }); t.textContent = (tv > 0 ? '+' : '') + tv; svg.appendChild(t); });
+    items.forEach((x, i) => {
+      const y = m.t + i * rowH + 3, h = rowH - 6; const x1 = Math.min(sx(0), sx(x.d)), w = Math.abs(sx(x.d) - sx(0));
+      const lab = svgEl('text', { x: m.l - 8, y: y + h / 2 + 4, 'text-anchor': 'end', class: 'lbl' }); lab.textContent = x.name; svg.appendChild(lab);
+      const rc = svgEl('rect', { x: x1, y, width: Math.max(w, 1), height: h, fill: x.d >= 0 ? 'var(--pos)' : 'var(--neg)', class: 'bar', rx: 2, tabindex: 0 });
+      const lines = [x.name, `${fP(x.pa)} → ${fP(x.pb)} (${fD(x.d)})`, `${fI(x.n)} secciones · ${fI(x.tb)} votos en ${YB}`];
+      rc.addEventListener('pointerenter', ev => showTip(ev, lines)); rc.addEventListener('pointermove', moveTip); rc.addEventListener('pointerleave', hideTip);
+      rc.addEventListener('focus', () => { const b = rc.getBoundingClientRect(); showTip({ pageX: b.left + window.scrollX, pageY: b.top + window.scrollY }, lines); }); rc.addEventListener('blur', hideTip);
+      svg.appendChild(rc);
+      const vt = svgEl('text', { x: x.d >= 0 ? sx(x.d) + 5 : sx(x.d) - 5, y: y + h / 2 + 4, 'text-anchor': x.d >= 0 ? 'start' : 'end', class: 'lbl' }); vt.textContent = fD(x.d); svg.appendChild(vt);
+    });
+    host.appendChild(svg);
+  }
+
+  // ---------- scatter (canvas)
+  const canvas = document.getElementById('scatter');
+  let scPts = [], scGeom = null;
+  function renderScatter(set) {
+    const bi = state.bloc; document.getElementById('hSc').textContent = `${B[bi].label}: porcentaje en ${YA} contra ${YB}, por sección`;
+    const asTable = document.getElementById('tSc').getAttribute('aria-pressed') === 'true';
+    const host = document.getElementById('cSc');
+    let pts = set.filter(r => r.sA[bi] != null && r.sB[bi] != null);
+    const total = pts.length; const CAP = 8000; let step = 1;
+    if (pts.length > CAP) { step = Math.ceil(pts.length / CAP); pts = pts.filter((_, i) => i % step === 0); }
+    document.getElementById('nSc').textContent = `Cada punto es una sección; la diagonal marca "sin cambio". Arriba de la diagonal el bloque subió.` + (step > 1 ? ` Se muestran ${fI(pts.length)} de ${fI(total)} secciones (1 de cada ${step}).` : ` ${fI(total)} secciones.`);
+    if (asTable) {
+      host.innerHTML = ''; const tw = el('div', 'tblwrap'); const t = el('table'); const th = el('tr'); ['Clave', 'Entidad', `${YA}`, `${YB}`, 'Cambio'].forEach((h, i) => th.appendChild(el('th', i < 2 ? 'l' : '', h))); t.appendChild(th);
+      pts.slice(0, 300).forEach(r => { const tr = el('tr'); tr.append(el('td', 'l', r.clave), el('td', 'l', sName(r.ent)), el('td', null, fP(r.sA[bi])), el('td', null, fP(r.sB[bi])), el('td', 'delta ' + (r.d[bi] > 0 ? 'pos' : 'neg'), fD(r.d[bi]))); t.appendChild(tr); });
+      tw.appendChild(t); host.appendChild(tw); if (pts.length > 300) host.appendChild(el('p', 'note', `Primeras 300 de ${fI(pts.length)}; la tabla completa está al final de la página.`)); return;
+    }
+    if (!host.contains(canvas)) { host.innerHTML = ''; const w = el('div', 'scatter-wrap'); w.appendChild(canvas); host.appendChild(w); }
+    scPts = pts; drawScatter();
+  }
+  function drawScatter() {
+    const bi = state.bloc, wrap = canvas.parentElement; if (!wrap) return;
+    const dpr = window.devicePixelRatio || 1, cw = wrap.clientWidth, ch = wrap.clientHeight; if (!cw || !ch) return;
+    canvas.width = cw * dpr; canvas.height = ch * dpr; const ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const m = { l: 44, r: 14, t: 10, b: 36 }, pw = cw - m.l - m.r, ph = ch - m.t - m.b;
+    let maxV = 10; for (const r of scPts) maxV = Math.max(maxV, r.sA[bi], r.sB[bi]); const lim = Math.min(100, Math.ceil(maxV / 10) * 10);
+    const sx = v => m.l + v / lim * pw, sy = v => m.t + ph - v / lim * ph;
+    scGeom = { sx, sy, lim, m, pw, ph };
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.font = '11px ' + css('--font'); ctx.fillStyle = css('--muted'); ctx.strokeStyle = css('--grid'); ctx.lineWidth = 1;
+    const stepT = lim <= 50 ? 10 : 20;
+    for (let v = 0; v <= lim; v += stepT) { ctx.beginPath(); ctx.moveTo(sx(0), sy(v)); ctx.lineTo(sx(lim), sy(v)); ctx.stroke(); ctx.beginPath(); ctx.moveTo(sx(v), sy(0)); ctx.lineTo(sx(v), sy(lim)); ctx.stroke(); ctx.textAlign = 'right'; ctx.fillText(v + ' %', m.l - 6, sy(v) + 4); ctx.textAlign = 'center'; ctx.fillText(v + ' %', sx(v), ch - m.b + 16); }
+    ctx.strokeStyle = css('--axis'); ctx.beginPath(); ctx.moveTo(sx(0), sy(0)); ctx.lineTo(sx(lim), sy(lim)); ctx.stroke();
+    ctx.fillStyle = css('--ink-2'); ctx.textAlign = 'center'; ctx.fillText(`${YA} · porcentaje de ${B[bi].label}`, m.l + pw / 2, ch - 4);
+    ctx.save(); ctx.translate(12, m.t + ph / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(`${YB}`, 0, 0); ctx.restore();
+    ctx.fillStyle = css('--dot'); ctx.globalAlpha = scPts.length > 2000 ? 0.35 : 0.6;
+    const rad = scPts.length > 3000 ? 2 : scPts.length > 800 ? 2.6 : 3.5;
+    for (const r of scPts) { ctx.beginPath(); ctx.arc(sx(r.sA[bi]), sy(r.sB[bi]), rad, 0, Math.PI * 2); ctx.fill(); }
+    ctx.globalAlpha = 1;
+  }
+  let hl = null;
+  canvas.addEventListener('pointermove', ev => {
+    if (!scGeom || !scPts.length) return; const bi = state.bloc; const rect = canvas.getBoundingClientRect(); const px = ev.clientX - rect.left, py = ev.clientY - rect.top;
+    let best = null, bd = 18 * 18; for (const r of scPts) { const dx = scGeom.sx(r.sA[bi]) - px, dy = scGeom.sy(r.sB[bi]) - py, d2 = dx * dx + dy * dy; if (d2 < bd) { bd = d2; best = r; } }
+    if (best !== hl) { hl = best; drawScatter(); if (best) { const ctx = canvas.getContext('2d'); ctx.fillStyle = css('--surface'); ctx.beginPath(); ctx.arc(scGeom.sx(best.sA[bi]), scGeom.sy(best.sB[bi]), 7, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = css('--dot'); ctx.beginPath(); ctx.arc(scGeom.sx(best.sA[bi]), scGeom.sy(best.sB[bi]), 5, 0, Math.PI * 2); ctx.fill(); } }
+    if (best) showTip(ev, [best.clave + ' · ' + sName(best.ent), `${fP(best.sA[bi])} → ${fP(best.sB[bi])} (${fD(best.d[bi])})`, `votos ${fI(best.totA)} → ${fI(best.totB)} · distrito ${best.dist}`]); else hideTip();
+  });
+  canvas.addEventListener('pointerleave', () => { hideTip(); if (hl) { hl = null; drawScatter(); } });
+  new ResizeObserver(() => drawScatter()).observe(document.body);
+  const mq = window.matchMedia('(prefers-color-scheme: dark)'); mq.addEventListener && mq.addEventListener('change', () => render());
+  new MutationObserver(() => render()).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  // ---------- tables
+  function secTable(list, bi, host, limitNote, compact) {
+    host.innerHTML = ''; if (!list.length) { host.appendChild(el('div', 'empty', 'Sin secciones.')); return; }
+    const t = el('table'); const th = el('tr');
+    if (compact) {
+      [['Clave', 'l'], ['Entidad', 'l'], ['Dto.', ''], [`Votos ${YA}`, ''], [`Votos ${YB}`, ''], [`${YA}`, ''], [`${YB}`, ''], ['Cambio', 'sel']].forEach(([h, c]) => th.appendChild(el('th', c, h))); t.appendChild(th);
+      list.forEach(r => { const tr = el('tr'); tr.append(el('td', 'l', r.clave), el('td', 'l', sName(r.ent)), el('td', null, String(r.dist)), el('td', null, fI(r.totA)), el('td', null, fI(r.totB)), el('td', null, fP(r.sA[bi])), el('td', null, fP(r.sB[bi])), el('td', 'sel delta ' + (r.d[bi] > 0 ? 'pos' : 'neg'), fD(r.d[bi]))); t.appendChild(tr); });
+      host.appendChild(t); return;
+    }
+    const heads = [['Clave', 'l'], ['Entidad', 'l'], ['Dto.', ''], [`LN ${YA}`, ''], [`LN ${YB}`, ''], [`Votos ${YA}`, ''], [`Votos ${YB}`, ''], [`Part. ${YA}`, ''], [`Part. ${YB}`, ''], ['Δ part.', '']];
+    B.forEach((b, i) => { heads.push([`${b.label} ${YA}`, i === bi ? 'sel' : '']); heads.push([`${b.label} ${YB}`, i === bi ? 'sel' : '']); heads.push([`Δ ${b.label}`, i === bi ? 'sel' : '']); });
+    heads.forEach(([h, c]) => th.appendChild(el('th', c, h))); t.appendChild(th);
+    list.forEach(r => {
+      const tr = el('tr'); tr.append(el('td', 'l', r.clave), el('td', 'l', sName(r.ent)), el('td', null, String(r.dist)), el('td', null, fI(r.lnA)), el('td', null, fI(r.lnB)), el('td', null, fI(r.totA)), el('td', null, fI(r.totB)), el('td', null, fP(r.pA)), el('td', null, fP(r.pB)), el('td', 'delta ' + (r.dP > 0 ? 'pos' : r.dP < 0 ? 'neg' : ''), fD(r.dP)));
+      B.forEach((b, i) => { const c = i === bi ? 'sel' : ''; tr.append(el('td', c, fP(r.sA[i])), el('td', c, fP(r.sB[i])), el('td', c + ' delta ' + (r.d[i] > 0 ? 'pos' : r.d[i] < 0 ? 'neg' : ''), fD(r.d[i]))); });
+      t.appendChild(tr);
+    });
+    host.appendChild(t); if (limitNote) host.appendChild(el('p', 'note', limitNote));
+  }
+  function renderTables(set) {
+    const bi = state.bloc; const valid = set.filter(r => r.d[bi] != null).sort((a, b) => b.d[bi] - a.d[bi]);
+    document.getElementById('hUp').textContent = `Mayores ganancias de ${B[bi].label}`; document.getElementById('hDown').textContent = `Mayores pérdidas de ${B[bi].label}`;
+    secTable(valid.slice(0, 20), bi, document.getElementById('tUp'), null, true); secTable(valid.slice(-20).reverse(), bi, document.getElementById('tDown'), null, true);
+    const LIM = 300; document.getElementById('nAll').textContent = valid.length > LIM ? `Ordenadas por Δ ${B[bi].label}; se muestran ${LIM} de ${fI(valid.length)}. El CSV delta_${YA}_${YB}.csv tiene todas.` : `${fI(valid.length)} secciones, ordenadas por Δ ${B[bi].label}.`;
+    secTable(valid.slice(0, LIM), bi, document.getElementById('tAll'));
+  }
+
+  function render() {
+    try { localStorage.setItem('delta-filters', JSON.stringify(state)); } catch (e) {}
+    const set = filtered(); hideTip();
+    renderKpis(set); renderHist(set); renderGeo(set); renderScatter(set); renderTables(set);
+  }
+  function niceTicks(lo, hi, n) { const span = hi - lo || 1; const raw = span / n; const p = Math.pow(10, Math.floor(Math.log10(raw))); const f = raw / p; const st = (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p; const out = []; for (let v = Math.ceil(lo / st) * st; v <= hi + 1e-9; v += st) out.push(+v.toFixed(6)); return out; }
+  function compact(v) { return v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(v >= 1e4 ? 0 : 1) + 'K' : String(v); }
+
+  const foot = document.getElementById('foot');
+  const src = Object.entries(DATA.sources).map(([y, s]) => `${y}: ${s.file}${s.preamble ? ' (' + s.preamble + ')' : ''}, ${fI(s.rows_in)} actas`).join(' · ');
+  foot.append(
+    el('p', null, `Fuente: bases de datos de Cómputos Distritales del INE, elección de diputaciones federales de mayoría relativa. ${src}.`),
+    el('p', null, `Método: las actas se suman por sección; el porcentaje de cada bloque se calcula sobre el total de votos de la sección (incluye nulos y no registrados). Los votos por combinación de coalición (p. ej. PVEM-PT-Morena) se suman al bloque que contiene a todos sus partidos. Bloques ${YB}: ${B.map(b => b.label + ' [' + b.members.join(', ') + ']').join('; ')}.`),
+    el('p', null, `Participación = total de votos / lista nominal de las casillas computadas. Los distritos son los de ${YB} (redistritación 2023). Las secciones creadas o suprimidas entre elecciones no se comparan. Generado ${DATA.generated}.`)
+  );
+  render();
+})();
+</script>
