@@ -76,7 +76,7 @@
   #tip strong { font-size: 13px; }
   #tip .k { color: var(--ink-2); }
   footer { color: var(--muted); font-size: 12px; max-width: 80ch; display: grid; gap: 6px; }
-  footer p { margin: 0; }
+  footer p { margin: 0; overflow-wrap: anywhere; }
   .empty { color: var(--muted); padding: 24px; text-align: center; }
   @media (prefers-reduced-motion: no-preference) { .card, .tile { transition: opacity .15s; } }
   @media (max-width: 480px) { .filters select, .filters input { min-width: 120px; } header h1 { font-size: 20px; } }
@@ -84,7 +84,7 @@
 
 <div class="wrap">
   <header>
-    <div class="eyebrow">Cómputos distritales INE · diputaciones federales · nivel sección electoral</div>
+    <div class="eyebrow">Resultados INE · diputaciones federales · nivel sección electoral</div>
     <h1 id="h1">Delta seccional</h1>
     <p id="intro"></p>
   </header>
@@ -372,7 +372,7 @@
     const bi = state.bloc; const valid = set.filter(r => r.d[bi] != null).sort((a, b) => b.d[bi] - a.d[bi]);
     document.getElementById('hUp').textContent = `Mayores ganancias de ${B[bi].label}`; document.getElementById('hDown').textContent = `Mayores pérdidas de ${B[bi].label}`;
     secTable(valid.slice(0, 20), bi, document.getElementById('tUp'), null, true); secTable(valid.slice(-20).reverse(), bi, document.getElementById('tDown'), null, true);
-    const LIM = 300; document.getElementById('nAll').textContent = valid.length > LIM ? `Ordenadas por Δ ${B[bi].label}; se muestran ${LIM} de ${fI(valid.length)}. El CSV delta_${YA}_${YB}.csv tiene todas.` : `${fI(valid.length)} secciones, ordenadas por Δ ${B[bi].label}.`;
+    const LIM = 300; document.getElementById('nAll').textContent = valid.length > LIM ? `Ordenadas por Δ ${B[bi].label}; se muestran ${LIM} de ${fI(valid.length)}. La base SQLite tiene todas (vista delta_seccion).` : `${fI(valid.length)} secciones, ordenadas por Δ ${B[bi].label}.`;
     secTable(valid.slice(0, LIM), bi, document.getElementById('tAll'));
   }
 
@@ -385,10 +385,10 @@
   function compact(v) { return v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(v >= 1e4 ? 0 : 1) + 'K' : String(v); }
 
   const foot = document.getElementById('foot');
-  const src = Object.entries(DATA.sources).map(([y, s]) => `${y}: ${s.file}${s.preamble ? ' (' + s.preamble + ')' : ''}, ${fI(s.rows_in)} actas`).join(' · ');
+  const src = Object.entries(DATA.sources).map(([y, s]) => `${y}: ${s.file}${s.preamble ? ' (' + s.preamble + ')' : ''}, ${fI(s.rows_in)} filas${s.url ? ', ' + s.url : ''}`).join(' · ');
   foot.append(
-    el('p', null, `Fuente: bases de datos de Cómputos Distritales del INE, elección de diputaciones federales de mayoría relativa. ${src}.`),
-    el('p', null, `Método: las actas se suman por sección; el porcentaje de cada bloque se calcula sobre el total de votos de la sección (incluye nulos y no registrados). Los votos por combinación de coalición (p. ej. PVEM-PT-Morena) se suman al bloque que contiene a todos sus partidos. Bloques ${YB}: ${B.map(b => b.label + ' [' + b.members.join(', ') + ']').join('; ')}.`),
+    el('p', null, `Fuente: INE (SICEE o Cómputos Distritales), elección de diputaciones federales de mayoría relativa. ${src}.`),
+    el('p', null, `Método: los resultados por acta o casilla se suman por sección; el porcentaje de cada bloque se calcula sobre el total de votos de la sección (incluye nulos y no registrados). Los votos por combinación de coalición (p. ej. PVEM-PT-Morena) se suman al bloque que contiene a todos sus partidos. Bloques ${YB}: ${B.map(b => b.label + ' [' + b.members.join(', ') + ']').join('; ')}.`),
     el('p', null, `Participación = total de votos / lista nominal de las casillas computadas. Los distritos son los de ${YB} (redistritación 2023). Las secciones creadas o suprimidas entre elecciones no se comparan. Generado ${DATA.generated}.`)
   );
   render();
